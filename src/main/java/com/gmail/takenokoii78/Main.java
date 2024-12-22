@@ -17,6 +17,10 @@ public class Main {
     private static final Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
+        OutputBuilder.text("ModelJSONGeneratorが正常に起動しました")
+            .color(OutputBuilder.Color.GREEN)
+            .out();
+
         loadPackMeta();
 
         while (true) {
@@ -31,7 +35,7 @@ public class Main {
                 .color(OutputBuilder.Color.WHITE)
                 .out();
 
-            final String text = scanner.next();
+            final String text = scanner.nextLine();
 
             if (text.isEmpty()) {
                 break;
@@ -80,28 +84,31 @@ public class Main {
                 }
             }
 
-            createJSONFiles(inTexturesDir);
+            final int count = createFiles(inTexturesDir);
 
             OutputBuilder.text("出力: ")
                 .color(OutputBuilder.Color.WHITE)
                 .append(
-                    OutputBuilder.text("END")
+                    OutputBuilder.text("jsonの生成が全て完了しました: " + count + "個のjsonファイルを編集しました")
                         .color(OutputBuilder.Color.GREEN)
                         .decoration(OutputBuilder.Decoration.BOLD)
                         .decoration(OutputBuilder.Decoration.ITALIC)
                 )
+                .newLine()
+                .append(
+                    OutputBuilder.text("Enterを押して終了")
+                        .decoration(OutputBuilder.Decoration.FINE)
+                )
                 .out();
 
-            final String text2 = scanner.nextLine();
-
-            if (text2.isEmpty()) {
-                scanner.close();
-                break;
-            }
+            scanner.nextLine();
+            scanner.close();
         }
     }
 
-    private static void createJSONFiles(@NotNull Path inDir) {
+    private static int createFiles(@NotNull Path inDir) {
+        int i = 0;
+
         try (final var stream = Files.list(inDir)) {
             for (final Path innerInPath : stream.toList()) {
                 final Path innerOutPath = Path.of(
@@ -120,9 +127,11 @@ public class Main {
                             .out();
                         Files.createDirectory(innerOutPath);
                     }
-                    createJSONFiles(innerInPath);
+                    i += createFiles(innerInPath);
                 }
                 else if (innerInPath.toString().endsWith(".png")) {
+                    i++;
+
                     if (!innerOutPath.toFile().exists()) {
                         OutputBuilder.text("ファイルを作成しました: ")
                             .decoration(OutputBuilder.Decoration.FINE)
@@ -132,6 +141,7 @@ public class Main {
                             .out();
                         Files.createFile(innerOutPath);
                     }
+
                     final JSONFile jsonFile = new JSONFile(innerOutPath.toString());
 
                     final JSONObject texturesObj = new JSONObject();
@@ -181,6 +191,8 @@ public class Main {
         catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        return i;
     }
 
     private static void loadPackMeta() {
@@ -218,15 +230,22 @@ public class Main {
         final String description = packMetaObj.get("pack.description", JSONValueType.STRING);
 
         OutputBuilder.text("pack_format: ")
-            .append(OutputBuilder.text(String.valueOf(packFormat)))
+            .append(
+                OutputBuilder.text(String.valueOf(packFormat))
+                    .color(OutputBuilder.Color.BLUE)
+            )
             .newLine()
-            .append(OutputBuilder.text("description: "))
+            .append(
+                OutputBuilder.text("description: " + description)
+                    .color(OutputBuilder.Color.BLUE)
+            )
             .newLine()
-            .append(OutputBuilder.text(description))
-            .newLine()
-            .append(OutputBuilder.text("pack.mcmetaのロードに成功しました"))
+            .append(
+                OutputBuilder.text("pack.mcmetaのロードに成功しました")
+                    .color(OutputBuilder.Color.GREEN)
+            )
             .color(OutputBuilder.Color.BLUE)
-            .decoration(OutputBuilder.Decoration.FINE);
+            .out();
     }
 
     private static void endToEnter(@NotNull String errorMessage) {
@@ -239,7 +258,8 @@ public class Main {
             )
             .out();
 
-        scanner.next();
+        scanner.nextLine();
+        scanner.close();
 
         throw new RuntimeException("Program End");
     }
@@ -249,7 +269,7 @@ public class Main {
             .decoration(OutputBuilder.Decoration.FINE)
             .out();
 
-        final String c = scanner.next();
+        final String c = scanner.nextLine();
 
         if (c.equals("n")) {
             return false;
