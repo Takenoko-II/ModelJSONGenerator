@@ -14,11 +14,15 @@ public class Main {
     private static final Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
+        System.out.println("Hello World");
+
         OutputBuilder.text("ModelJSONGeneratorが正常に起動しました")
             .color(OutputBuilder.Color.GREEN)
             .out();
 
-        loadPackMeta();
+        if (!loadPackMeta()) {
+            return;
+        }
 
         while (true) {
             OutputBuilder.text("操作する名前空間を入力してください")
@@ -47,7 +51,7 @@ public class Main {
                 .out();
 
             if (!confirm()) {
-                break;
+                continue;
             }
 
             OutputBuilder.text("<ItemModel>.jsonを生成するための画像ファイルの親ディレクトリまでのパスを入力してください:")
@@ -107,6 +111,7 @@ public class Main {
                 }
                 catch (IOException e) {
                     endToEnter("出力先ルートディレクトリを作成できませんでした");
+                    break;
                 }
             }
 
@@ -114,12 +119,18 @@ public class Main {
 
             final int count = createFiles(inTexturesDir, cases);
 
-            createItemModelJSON(inTexturesDir, cases);
+            if (count < 0) {
+                break;
+            }
+
+            if (!createItemModelJSON(inTexturesDir, cases)) {
+                break;
+            }
 
             OutputBuilder.text("出力: ")
                 .color(OutputBuilder.Color.WHITE)
                 .append(
-                    OutputBuilder.text("jsonの生成が全て完了しました: " + count + "個のjsonファイルを編集しました")
+                    OutputBuilder.text("jsonの生成が全て完了しました: " + (count + 1) + "個のjsonファイルを編集しました")
                         .color(OutputBuilder.Color.GREEN)
                         .decoration(OutputBuilder.Decoration.BOLD)
                         .decoration(OutputBuilder.Decoration.ITALIC)
@@ -132,7 +143,8 @@ public class Main {
                 .out();
 
             scanner.nextLine();
-            scanner.close();
+            // scanner.close();
+            break;
         }
     }
 
@@ -140,12 +152,39 @@ public class Main {
         return Path.of(path.subpath(0, index) + "\\" + replacement + "\\" + path.subpath(index + 1, path.getNameCount()));
     }
 
-    private static void createItemModelJSON(@NotNull Path inDir, @NotNull TypedJSONArray<JSONObject> cases) {
+    private static boolean createItemModelJSON(@NotNull Path inDir, @NotNull TypedJSONArray<JSONObject> cases) {
         final Path temp = replaceAt(inDir, 2, "items");
         final Path outPath = Path.of(temp.subpath(0, 3) + "\\" + temp.subpath(4, temp.getNameCount()) + ".json");
+        final Path items = outPath.subpath(0, outPath.getNameCount() - 1);
 
-        if (!outPath.subpath(0, outPath.getNameCount()).toFile().mkdirs()) {
-            endToEnter("ディレクトリの作成に失敗しました");
+        items.toFile().mkdirs();
+
+        if (!outPath.subpath(0, outPath.getNameCount() - 1).toFile().exists()) {
+            endToEnter("ディレクトリの作成に失敗しました: " + items);
+            return false;
+        }
+
+        OutputBuilder.text("ディレクトリを作成しました: ")
+            .decoration(OutputBuilder.Decoration.FINE)
+            .out();
+        OutputBuilder.text(items.toString())
+            .color(OutputBuilder.Color.PINK)
+            .out();
+
+        if (!Files.exists(outPath)) {
+            try {
+                Files.createFile(outPath);
+                OutputBuilder.text("ファイルを作成しました: ")
+                    .decoration(OutputBuilder.Decoration.FINE)
+                    .out();
+                OutputBuilder.text(outPath.toString())
+                    .color(OutputBuilder.Color.PINK)
+                    .out();
+            }
+            catch (IOException e) {
+                endToEnter(e.toString());
+                return false;
+            }
         }
 
         final JSONFile file = new JSONFile(outPath.toString());
@@ -165,7 +204,25 @@ public class Main {
         jsonObject.set("model.index", 0);
         jsonObject.set("model.cases", cases);
 
+        OutputBuilder.text(outPath.toString())
+            .color(OutputBuilder.Color.PINK)
+            .newLine()
+            .append(
+                OutputBuilder.text("> ファイルに以下を書き込みます:")
+                    .decoration(OutputBuilder.Decoration.FINE)
+                    .color(OutputBuilder.Color.WHITE)
+            )
+            .newLine()
+            .append(
+                OutputBuilder.text(JSONSerializer.serialize(jsonObject))
+                    .color(OutputBuilder.Color.GREEN)
+                    .decoration(OutputBuilder.Decoration.ITALIC)
+            )
+            .out();
+
         file.write(jsonObject);
+
+        return true;
     }
 
     private static void addCase(@NotNull TypedJSONArray<JSONObject> cases, @NotNull String path) {
@@ -260,12 +317,13 @@ public class Main {
         }
         catch (IOException e) {
             endToEnter(e.toString());
+            return Integer.MIN_VALUE;
         }
 
         return i;
     }
 
-    private static void loadPackMeta() {
+    private static boolean loadPackMeta() {
         final Path root = Path.of(FileSystems.getDefault().getPath("").toAbsolutePath().toString());
 
         OutputBuilder.text("リソースパックのルートディレクトリを以下として読み込みます: ")
@@ -282,6 +340,7 @@ public class Main {
 
         if (!Files.exists(packMeta)) {
             endToEnter("pack.mcmetaが見つかりませんでした");
+            return false;
         }
 
         OutputBuilder.text("pack.mcmetaを読み込んでいます...")
@@ -291,9 +350,11 @@ public class Main {
 
         if (!packMetaObj.has("pack.pack_format")) {
             endToEnter("pack.mcmetaにpack.pack_formatが欠落しています");
+            return false;
         }
         else if (!packMetaObj.has("pack.description")) {
             endToEnter("pack.mcmetaにpack.descriptionが欠落しています");
+            return false;
         }
 
         final int packFormat = packMetaObj.get("pack.pack_format", JSONValueType.NUMBER).intValue();
@@ -316,6 +377,8 @@ public class Main {
             )
             .color(OutputBuilder.Color.BLUE)
             .out();
+
+        return true;
     }
 
     private static void endToEnter(@NotNull String errorMessage) {
@@ -329,9 +392,7 @@ public class Main {
             .out();
 
         scanner.nextLine();
-        scanner.close();
-
-        throw new RuntimeException("Program End");
+        // scanner.close();
     }
 
     private static boolean confirm() {
