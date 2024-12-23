@@ -127,19 +127,14 @@ public class Main {
                 break;
             }
 
-            OutputBuilder.text("出力: ")
-                .color(OutputBuilder.Color.WHITE)
-                .append(
-                    OutputBuilder.text("jsonの生成が全て完了しました: " + (count + 1) + "個のjsonファイルを編集しました")
-                        .color(OutputBuilder.Color.GREEN)
-                        .decoration(OutputBuilder.Decoration.BOLD)
-                        .decoration(OutputBuilder.Decoration.ITALIC)
-                )
-                .newLine()
-                .append(
-                    OutputBuilder.text("Enterを押して終了")
-                        .decoration(OutputBuilder.Decoration.FINE)
-                )
+            OutputBuilder.text("jsonの生成が全て完了しました: " + (count + 1) + "個のjsonファイルを作成または編集しました")
+                .color(OutputBuilder.Color.GREEN)
+                .decoration(OutputBuilder.Decoration.BOLD)
+                .decoration(OutputBuilder.Decoration.ITALIC)
+                .out();
+
+            OutputBuilder.text("Enterを押して終了")
+                .decoration(OutputBuilder.Decoration.FINE)
                 .out();
 
             scanner.nextLine();
