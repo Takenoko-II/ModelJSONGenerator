@@ -222,7 +222,7 @@ public class Main {
 
     private static void addCase(@NotNull TypedJSONArray<JSONObject> cases, @NotNull String path) {
         final JSONObject jsonObject = new JSONObject();
-        jsonObject.set("when", path);
+        jsonObject.set("when", path.replaceAll("^item/[a-zA-Z0-9_]+/", ""));
         jsonObject.set("model.type", "minecraft:model");
         jsonObject.set("model.model", path);
         cases.add(jsonObject);
@@ -267,7 +267,7 @@ public class Main {
 
                     final JSONObject texturesObj = new JSONObject();
                     final String texturePath = innerOutPath.toString()
-                        .replaceAll("^assets\\\\[a-zA-Z0-9_]+\\\\models\\\\item\\\\[a-zA-Z0-9_]+\\\\", "")
+                        .replaceAll("^assets\\\\[a-zA-Z0-9_]+\\\\models\\\\", "")
                         .replaceAll("\\.json$", "")
                         .replaceAll("\\\\", "/");
 
